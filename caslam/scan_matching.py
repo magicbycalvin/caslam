@@ -76,7 +76,7 @@ def get_correspondences(P, Q):
     return corr
 
 
-def icp_least_squares(P, Q, niter=50, kernel=lambda distance: 1.0, print_iter=False):
+def icp_least_squares(P, Q, tol=1e-3, max_iter=50, kernel=lambda distance: 1.0, print_iter=False):
     x = np.zeros((3, 1))
     corr_values = []
     chi_values = []
@@ -84,7 +84,8 @@ def icp_least_squares(P, Q, niter=50, kernel=lambda distance: 1.0, print_iter=Fa
     P_values = [P.copy()]
     P_xform = P.copy()
 
-    for i in range(niter):
+    last_chi = np.inf
+    for i in range(max_iter):
         if print_iter: print(f'Iteration number: {i}')
 
         corr = get_correspondences(P_xform, Q)
@@ -101,7 +102,11 @@ def icp_least_squares(P, Q, niter=50, kernel=lambda distance: 1.0, print_iter=Fa
         P_values.append(P_xform)
 
         if print_iter:
-            print(f'[+] Chi^2 value: {chi}')
+            print(f'[+] Chi^2 value: {chi[0]}')
+
+        if last_chi - chi[0] < tol:
+            break
+        last_chi = chi[0]
 
     corr_values.append(corr_values[-1])
 
@@ -123,7 +128,7 @@ if __name__ == '__main__':
     Q = np.vstack([xtmp[subsample], img.shape[0] - ytmp[subsample]]).astype(float)
     P = R_true@Q + t_true + np.random.randn(*Q.shape)
 
-    P_values, chi_values, corr_values = icp_least_squares(P, Q, niter=100, print_iter=True)
+    P_values, chi_values, corr_values = icp_least_squares(P, Q, max_iter=100, print_iter=True)
 
     plt.close('all')
     plt.figure()
