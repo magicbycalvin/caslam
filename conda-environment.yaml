@@ -1,0 +1,15 @@
+name: caslam
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3
+  - conda-forge:opencv
+  - numpy
+  - scipy
+  - matplotlib
+  - numba
+  - spyder
+  - pytest
+  - imageio
+
