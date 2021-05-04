@@ -12,4 +12,6 @@ dependencies:
   - spyder
   - pytest
   - imageio
+  - pip:
+    - graphslam
 

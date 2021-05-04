@@ -76,6 +76,20 @@ def get_correspondences(P, Q):
     return corr
 
 
+# def compute_covariance(P, Q, correspondences, kernel=lambda diff: 1.0):
+#     cov = np.zeros((2, 2))
+#     exclude_indices = []
+
+#     for i, j in correspondences:
+#         p_point = P[:, i, np.newaxis]
+#         q_point = Q[:, j, np.newaxis]
+#         weight = kernel(p_point - q_point)
+#         if weight < 0.01: exclude_indices.append(i)
+#         cov += weight * q_point.dot(p_point.T)
+
+#     return cov, exclude_indices
+
+
 def icp_least_squares(P, Q, tol=1e-3, max_iter=50, kernel=lambda distance: 1.0, print_iter=False):
     x = np.zeros((3, 1))
     corr_values = []
@@ -105,16 +119,19 @@ def icp_least_squares(P, Q, tol=1e-3, max_iter=50, kernel=lambda distance: 1.0, 
             print(f'[+] Chi^2 value: {chi[0]}')
 
         if last_chi - chi[0] < tol:
+            if print_iter: print('[*] Stopping condition met! Done.')
             break
         last_chi = chi[0]
 
     corr_values.append(corr_values[-1])
 
-    return P_values, chi_values, corr_values
+    return P_values, chi_values, corr_values, x_values
 
 
-if __name__ == '__main__':
-    fname = os.path.join('..', 'data', 'images', 'doge.png')
+def do_example(max_iter=200, fname=None, img_scale=0.5):
+    if fname is None:
+        fname = os.path.join('..', 'data', 'images', 'doge.png')
+
     img = cv2.imread(fname, cv2.IMREAD_GRAYSCALE)
 
     theta_true = np.pi/4
@@ -124,11 +141,31 @@ if __name__ == '__main__':
 
     ytmp, xtmp = np.where(img==0)
     np.random.seed(5)
-    subsample = np.random.choice(range(len(xtmp)), size=int(0.5*len(xtmp)), replace=False)
+    subsample = np.random.choice(range(len(xtmp)), size=int(img_scale*len(xtmp)), replace=False)
     Q = np.vstack([xtmp[subsample], img.shape[0] - ytmp[subsample]]).astype(float)
     P = R_true@Q + t_true + np.random.randn(*Q.shape)
 
-    P_values, chi_values, corr_values = icp_least_squares(P, Q, max_iter=100, print_iter=True)
+    P_values, chi_values, corr_values, x_values = icp_least_squares(P, Q, max_iter=max_iter)
+
+    return Q, P_values, chi_values, corr_values, x_values
+
+
+if __name__ == '__main__':
+    fname = os.path.join('..', 'data', 'images', 'doge.png')
+    img = cv2.imread(fname, cv2.IMREAD_GRAYSCALE)
+
+    theta_true = np.pi/6
+    t_true = np.array([[200.],
+                       [100.]])
+    R_true = R(theta_true)
+
+    ytmp, xtmp = np.where(img==0)
+    np.random.seed(5)
+    subsample = np.random.choice(range(len(xtmp)), size=int(0.5*len(xtmp)), replace=False)
+    Q = np.vstack([xtmp[subsample], img.shape[0] - ytmp[subsample]]).astype(float)
+    P = R_true@Q + t_true #+ np.random.randn(*Q.shape)
+
+    P_values, chi_values, corr_values, x_values = icp_least_squares(P, Q, max_iter=100, print_iter=True)
 
     plt.close('all')
     plt.figure()
